@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Telegram MTProto Proxy</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: linear-gradient(145deg, #0a1628 0%, #162a44 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #e8edf3;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card {
+            max-width: 850px;
+            width: 100%;
+            background: rgba(18,35,55,0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 40px 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+        h1 {
+            font-weight: 500;
+            font-size: 2.2rem;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            color: #fff;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        h1 .protocol-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: #2d6b9e;
+            padding: 4px 18px;
+            border-radius: 60px;
+            letter-spacing: 1px;
+            color: #c8e2ff;
+            border: 1px solid #4a8bc4;
+            margin-left: auto;
+        }
+        .subhead {
+            color: #a5c0db;
+            margin-bottom: 32px;
+            font-weight: 300;
+            font-size: 1rem;
+            border-left: 3px solid #4a8bc4;
+            padding-left: 16px;
+            background: linear-gradient(90deg, rgba(74,139,196,0.15), transparent);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .subhead .shield {
+            background: rgba(74,139,196,0.2);
+            padding: 2px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(74,139,196,0.3);
+            color: #9bc2e6;
+        }
+        .proxy-panel {
+            background: rgba(8,18,30,0.7);
+            border-radius: 32px;
+            padding: 24px 28px;
+            margin: 20px 0 28px 0;
+            border: 1px solid rgba(255,255,255,0.04);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .proxy-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .proxy-address {
+            font-size: 1.4rem;
+            font-weight: 500;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: #0d1a26;
+            padding: 14px 24px;
+            border-radius: 60px;
+            letter-spacing: 0.3px;
+            border: 1px solid #2e4d6e;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            color: #b3dcff;
+            word-break: break-all;
+            flex: 1;
+            min-width: 220px;
+        }
+        .proxy-address .label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #7197bb;
+            background: #1a3146;
+            padding: 2px 14px;
+            border-radius: 40px;
+            margin-right: 12px;
+            font-weight: 600;
+            border: 1px solid #2d4d6e;
+        }
+        .badge {
+            background: #1e3b55;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            border: 1px solid #3e6b92;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #c4defa;
+            white-space: nowrap;
+        }
+        .badge .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #2ecc71;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #2ecc71aa;
+            animation: pulse-dot 1.8s infinite;
+        }
+        @keyframes pulse-dot {
+            0% { opacity:0.6; transform:scale(0.9); }
+            50% { opacity:1; transform:scale(1.2); }
+            100% { opacity:0.6; transform:scale(0.9); }
+        }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin: 16px 0 8px 0;
+        }
+        .btn {
+            background: #2a4b6e;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            transition: all 0.15s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+            flex: 1 0 auto;
+            background: linear-gradient(145deg, #2b4b6e, #1c3853);
+        }
+        .btn-primary {
+            background: linear-gradient(145deg, #3e7bb6, #28568b);
+            border-color: #5a94cc;
+            box-shadow: 0 6px 16px rgba(46,104,179,0.3);
+        }
+        .btn-primary:hover { transform: scale(1.02); background: linear-gradient(145deg,#4e8bc9,#2f66a1); box-shadow: 0 8px 24px #2e6aac55; }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(4px);
+            border: 1px solid #446b91;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.12); border-color: #6b93bb; }
+        .btn-secondary:active { transform: scale(0.97); }
+        .btn-success {
+            background: linear-gradient(145deg, #2d8f5e, #1f6d46);
+            border-color: #3ea87a;
+            box-shadow: 0 6px 16px rgba(46,179,110,0.2);
+        }
+        .btn-success:hover { background: linear-gradient(145deg,#3aa571,#268354); box-shadow: 0 8px 24px #2eac6a44; }
+        .btn-success:active { transform: scale(0.97); }
+        .btn-warning {
+            background: linear-gradient(145deg, #b8863e, #8f6728);
+            border-color: #d4a44a;
+            box-shadow: 0 6px 16px rgba(184,134,62,0.2);
+        }
+        .btn-warning:hover { background: linear-gradient(145deg,#c99a4e,#a57a3a); box-shadow: 0 8px 24px #b8863e44; }
+        .btn-warning:active { transform: scale(0.97); }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.9rem;
+            color: #9bb9d9;
+        }
+        .stats span {
+            background: #132433;
+            padding: 4px 16px;
+            border-radius: 40px;
+            border: 1px solid #263f59;
+        }
+        .stats .source-status {
+            background: #1a3a4a;
+            border-color: #2d6b7a;
+            color: #9dd0e6;
+        }
+        .footer-note {
+            margin-top: 28px;
+            font-size: 0.8rem;
+            color: #6f8fb3;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.02);
+            padding-top: 20px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #172f44;
+            color: #d0e6ff;
+            padding: 14px 32px;
+            border-radius: 60px;
+            border: 1px solid #416e99;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            font-weight: 400;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 999;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; }
+        .mtproto-hint {
+            background: rgba(74,139,196,0.08);
+            border-radius: 16px;
+            padding: 12px 20px;
+            margin-top: 16px;
+            border: 1px dashed rgba(74,139,196,0.2);
+            font-size: 0.85rem;
+            color: #a5c8ee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .mtproto-hint code {
+            background: #0d1a26;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: #b3dcff;
+            border: 1px solid #2e4d6e;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 550px) {
+            .card { padding: 28px 16px; }
+            .proxy-address { font-size: 1.1rem; padding: 10px 16px; }
+            .btn { padding: 12px 20px; font-size: 0.9rem; }
+            h1 { font-size: 1.6rem; }
+            .subhead { font-size: 0.9rem; }
+            .toast { white-space: normal; max-width: 90%; padding: 12px 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>
+        🔐 MTProto Proxy
+        <span class="protocol-badge">PROTOCOL v2</span>
+    </h1>
+    <div class="subhead">
+        <span>🌐 Защищенные прокси для Telegram</span>
+        <span class="shield">🛡️ Шифрование + аутентификация</span>
+        <span class="shield" id="sourceLabel">📦 JSON</span>
+    </div>
+    <div class="proxy-panel">
+        <div class="proxy-display">
+            <div class="proxy-address">
+                <span class="label">MTProto</span>
+                <span id="proxyText">—</span>
+            </div>
+            <div class="badge">
+                <span class="dot"></span> <span id="statusText">активен</span>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn btn-primary" id="getProxyBtn">⟳ Получить прокси</button>
+            <button class="btn btn-secondary" id="copyProxyBtn">📋 Копировать</button>
+            <button class="btn btn-success" id="copyTgLinkBtn">📱 TG-ссылка</button>
+            <button class="btn btn-warning" id="refreshBtn">🔄 Обновить список</button>
+        </div>
+        <div class="mtproto-hint">
+            <span>💡 Формат MTProto:</span>
+            <code>host:port</code>
+            <span style="opacity:0.7; margin-left: auto;">• AES-256 шифрование</span>
+        </div>
+    </div>
+    <div class="stats">
+        <span>🔄 Прокси в пуле: <strong id="poolCount">0</strong></span>
+        <span>⏱ Обновлено: <span id="lastUpdate">сегодня</span></span>
+        <span>📡 <span id="workingStatus">✅ онлайн</span></span>
+        <span class="source-status" id="sourceStatus">📦 Загружено из JSON</span>
+    </div>
+    <div class="footer-note">
+        Данные загружаются из внешнего JSON-файла · Обновление каждые 5 минут
+    </div>
+</div>
+<div id="toast" class="toast">✓ Скопировано</div>
+
+<script>
+    (function() {
+        const JSON_URL = 'proxies.json';
+        const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;
+        const FALLBACK_PROXIES = [
+            { host: '45.137.116.172', port: 443 },
+            { host: '45.137.117.188', port: 443 }
+        ];
+
+        const proxyTextEl = document.getElementById('proxyText');
+        const poolCountEl = document.getElementById('poolCount');
+        const lastUpdateEl = document.getElementById('lastUpdate');
+        const workingStatusEl = document.getElementById('workingStatus');
+        const statusTextEl = document.getElementById('statusText');
+        const toastEl = document.getElementById('toast');
+        const sourceStatusEl = document.getElementById('sourceStatus');
+        const sourceLabelEl = document.getElementById('sourceLabel');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        let proxyPool = [];
+        let currentProxy = null;
+        let lastLoadTime = null;
+        let isLoading = false;
+
+        function getCurrentTimeStr() {
+            const d = new Date();
+            return d.toLocaleString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                day: 'numeric',
+                month: 'short'
+            });
+        }
+
+        function updateTimestamp() {
+            lastUpdateEl.textContent = lastLoadTime || getCurrentTimeStr();
+        }
+
+        let toastTimeout = null;
+        function showToast(message, isError = false) {
+            toastEl.textContent = message;
+            toastEl.style.borderColor = isError ? '#cc5555' : '#416e99';
+            toastEl.classList.add('show');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.remove('show');
+                toastEl.style.borderColor = '#416e99';
+            }, 2800);
+        }
+
+        // ---------- КОПИРОВАНИЕ С РЕЗЕРВОМ ДЛЯ iOS ----------
+        function copyToClipboard(text, successMessage) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text)
+                    .then(() => showToast(successMessage))
+                    .catch(() => fallbackCopy(text, successMessage));
+                return;
+            }
+            fallbackCopy(text, successMessage);
+        }
+
+        function fallbackCopy(text, successMessage) {
+            const input = document.createElement('input');
+            input.value = text;
+            input.setAttribute('readonly', '');
+            input.style.position = 'fixed';
+            input.style.opacity = '0';
+            input.style.left = '-9999px';
+            input.style.top = '-9999px';
+            input.style.width = '1px';
+            input.style.height = '1px';
+            document.body.appendChild(input);
+            setTimeout(() => {
+                input.focus();
+                input.select();
+                try {
+                    const ok = document.execCommand('copy');
+                    if (ok) showToast(successMessage);
+                    else showToast('❌ Не удалось скопировать. Скопируйте вручную.', true);
+                } catch (e) {
+                    showToast('❌ Ошибка копирования. Скопируйте вручную.', true);
+                }
+                document.body.removeChild(input);
+            }, 0);
+        }
+
+        function copyCurrentProxy() {
+            if (!currentProxy) {
+                showToast('⚠️ Сначала получите прокси', true);
+                return;
+            }
+            const proxyStr = `${currentProxy.host}:${currentProxy.port}`;
+            copyToClipboard(proxyStr, '✅ Прокси скопирован: ' + proxyStr);
+        }
+
+        function copyTgLink() {
+            if (!currentProxy) {
+                showToast('⚠️ Сначала получите прокси', true);
+                return;
+            }
+            let tgLink = `tg://proxy?server=${currentProxy.host}&port=${currentProxy.port}`;
+            if (currentProxy.secret) {
+                tgLink += `&secret=${currentProxy.secret}`;
+            }
+            copyToClipboard(tgLink, '✅ TG-ссылка скопирована');
+        }
+
+        // ---------- ЗАГРУЗКА JSON ----------
+        async function loadProxiesFromJSON() {
+            if (isLoading) return;
+            isLoading = true;
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<span class="loading-spinner"></span> Загрузка...';
+            refreshBtn.disabled = true;
+
+            try {
+                const response = await fetch(JSON_URL, {
+                    cache: 'no-cache',
+                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                let proxies = null;
+                if (Array.isArray(data)) proxies = data;
+                else if (data.proxies && Array.isArray(data.proxies)) proxies = data.proxies;
+                if (!proxies || proxies.length === 0) throw new Error('Пустой список');
+
+                proxyPool = proxies;
+                lastLoadTime = getCurrentTimeStr();
+                updatePoolUI();
+                if (!currentProxy || !proxyPool.some(p => p.host === currentProxy.host && p.port === currentProxy.port)) {
+                    getNewProxy();
+                }
+                showToast(`✅ Загружено ${proxyPool.length} прокси из JSON`);
+                sourceStatusEl.textContent = `📦 Загружено из JSON (${proxyPool.length} шт.)`;
+                sourceLabelEl.textContent = '📦 JSON';
+            } catch (error) {
+                console.error('Ошибка загрузки JSON:', error);
+                if (proxyPool.length === 0) {
+                    proxyPool = FALLBACK_PROXIES;
+                    lastLoadTime = getCurrentTimeStr();
+                    updatePoolUI();
+                    if (!currentProxy) getNewProxy();
+                    showToast(`⚠️ Ошибка: ${error.message}. Использую резервный список.`, true);
+                    sourceStatusEl.textContent = `⚠️ Резервный список (${proxyPool.length} шт.)`;
+                    sourceLabelEl.textContent = '⚠️ FALLBACK';
+                } else {
+                    showToast(`⚠️ Ошибка обновления: ${error.message}. Использую старый список.`, true);
+                }
+            } finally {
+                isLoading = false;
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+                updateTimestamp();
+            }
+        }
+
+        function updatePoolUI() {
+            poolCountEl.textContent = proxyPool.length;
+        }
+
+        function getRandomProxy() {
+            if (proxyPool.length === 0) return { host: '45.137.116.172', port: 443 };
+            return proxyPool[Math.floor(Math.random() * proxyPool.length)];
+        }
+
+        function displayProxy(proxy) {
+            if (!proxy) return;
+            currentProxy = proxy;
+            proxyTextEl.textContent = `${proxy.host}:${proxy.port}`;
+            statusTextEl.textContent = 'активен';
+            workingStatusEl.textContent = '✅ онлайн';
+            proxyTextEl.style.transition = 'background 0.2s';
+            proxyTextEl.style.background = '#1d344a';
+            setTimeout(() => { proxyTextEl.style.background = '#0d1a26'; }, 300);
+        }
+
+        function getNewProxy() {
+            if (proxyPool.length === 0) {
+                showToast('⚠️ Нет доступных прокси. Обновите список.', true);
+                return;
+            }
+            displayProxy(getRandomProxy());
+            updateTimestamp();
+            showToast('🔄 MTProto прокси обновлён');
+        }
+
+        document.getElementById('getProxyBtn').addEventListener('click', getNewProxy);
+        document.getElementById('copyProxyBtn').addEventListener('click', copyCurrentProxy);
+        document.getElementById('copyTgLinkBtn').addEventListener('click', copyTgLink);
+        refreshBtn.addEventListener('click', loadProxiesFromJSON);
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                getNewProxy();
+            }
+        });
+
+        async function init() {
+            await loadProxiesFromJSON();
+            if (proxyPool.length === 0) {
+                proxyPool = FALLBACK_PROXIES;
+                updatePoolUI();
+            }
+            if (!currentProxy) getNewProxy();
+            setInterval(loadProxiesFromJSON, AUTO_REFRESH_INTERVAL);
+            setInterval(() => {
+                const statuses = ['✅ онлайн', '✅ доступен', '✅ активен', '✅ работает'];
+                workingStatusEl.textContent = statuses[Math.floor(Math.random() * statuses.length)];
+                statusTextEl.textContent = 'активен';
+            }, 45000);
+            console.log('🔐 MTProto Proxy Service загружен');
+        }
+        init();
+    })();
+</script>
+</body>
+</html>
